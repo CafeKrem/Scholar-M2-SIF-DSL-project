@@ -29,10 +29,22 @@ Expression:
 	TerminalExpression ({Operation.left=current} op=Operator right=TerminalExpression)*;
 
 TerminalExpression returns Expression:
-	'(' Expression ')' | {Const} value=INT | {Variable} varName=ID;
+	'(' Expression ')' | {Const} value=INT | {Variable} varName=ID | JsonObject;
+
+JsonObject:
+	"{" (associations+=Association)? (',' associations+=Association)* "}";
+
+Association:
+	key=STRING ":" -> value=JsonAttribute;
+
+JsonAttribute returns JsonAttribute:
+	STRING | INT | Boolean;
+
+Boolean:
+	{True} "true" | {False} "false";
 
 Operator:
-	{Addition} "+" | {Minus} "-" | {Time}  "*"| {Div}"/";
+	{Addition} "+" | {Minus} "-" | {Time} "*" | {Div} "/";
 
 Load:
 	"load" "(" path=STRING "," varName=ID ")";

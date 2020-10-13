@@ -21,6 +21,7 @@ import org.xtext.example.mydsl.myDsl.Div
 import org.xtext.example.mydsl.myDsl.Time
 import org.xtext.example.mydsl.myDsl.Addition
 import org.xtext.example.mydsl.myDsl.Minus
+import org.xtext.example.mydsl.myDsl.JsonObject
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MyDslInjectorProvider)
@@ -147,5 +148,14 @@ class MyDslParsingTest {
 		var multExpr = result.statements.get(1) as Operation
 		var save = result.statements.get(2) as Save
 	}
-
+	
+	@Test
+	def void testSimpleJSONObjectExpression(){
+		val result = parseHelper.parse('''
+			{ "string"  : "ValueA", "integer": 10 , "booleanTrue": true , "booleanFalse" : false } 
+		''')
+		Assertions.assertEquals(result.statements.size(), 1)
+		val jsonObject =  result.statements.get(0) as JsonObject
+//		Assertions.assertEquals(jsonObject.) 
+	}
 }
