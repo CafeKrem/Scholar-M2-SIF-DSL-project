@@ -1,0 +1,61 @@
+grammar org.xtext.example.mydsl.MyDsl with org.eclipse.xtext.common.Terminals
+
+generate myDsl "http://www.xtext.org/example/mydsl/MyDsl"
+
+Programme:
+	statements+=Statement;
+
+Statement:
+//Assignement
+	Primitive | Expression;
+
+Primitive:
+	Load | Save;
+	
+Expression:
+	BinaryOp
+	| Const
+	| Variable
+	//	| JsonObjectGet
+	//	| JsonObjectAssignement
+;
+
+//JsonObjectGet:
+//	jsonObject = 
+//;
+BinaryOp:
+	left=ExpressionTerminal op=Operator right=Expression 
+;
+
+ExpressionTerminal:
+	Const
+	| Variable
+;
+
+Operator:
+	Addition | Minus | Time | Div
+;
+Addition:
+	"+"
+;
+Minus:
+	"-"
+;
+Time:
+	"*"
+;
+Div:
+	"/"
+;
+
+Variable:
+	varName=ID;
+
+Const:
+	value=INT;
+
+Load:
+	"load" "(" path=STRING "," varName=ID ")";
+
+Save:
+	"save" "(" path=STRING "," varName=ID ")";
