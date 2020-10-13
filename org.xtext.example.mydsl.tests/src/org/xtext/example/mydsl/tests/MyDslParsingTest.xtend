@@ -10,12 +10,17 @@ import org.eclipse.xtext.testing.util.ParseHelper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
-import org.xtext.example.mydsl.myDsl.BinaryOp
+import org.xtext.example.mydsl.myDsl.Operation
 import org.xtext.example.mydsl.myDsl.Const
 import org.xtext.example.mydsl.myDsl.Load
 import org.xtext.example.mydsl.myDsl.Programme
 import org.xtext.example.mydsl.myDsl.Save
 import org.xtext.example.mydsl.myDsl.Variable
+import org.xtext.example.mydsl.myDsl.Operation
+import org.xtext.example.mydsl.myDsl.Div
+import org.xtext.example.mydsl.myDsl.Time
+import org.xtext.example.mydsl.myDsl.Addition
+import org.xtext.example.mydsl.myDsl.Minus
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MyDslInjectorProvider)
@@ -59,55 +64,88 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			1 + 2 
 		''')
-		val addition = result.statements.get(0) as BinaryOp
+		val addition = result.statements.get(0) as Operation
 		Assertions.assertEquals((addition.left as Const).value, 1)
 		Assertions.assertEquals((addition.right as Const).value, 2)
 	}
-	
+
 	@Test
-	def void testVarAddition(){
+	def void testVarAddition() {
 		val result = parseHelper.parse('''
 			a + b 
 		''')
-		val addition = result.statements.get(0) as BinaryOp
+		val addition = result.statements.get(0) as Operation
 		Assertions.assertEquals((addition.left as Variable).varName, "a")
 		Assertions.assertEquals((addition.right as Variable).varName, "b")
 	}
+
 	@Test
-	def void testSubstraction(){
+	def void testSubstraction() {
 		val result = parseHelper.parse('''
 			a - 1 
 		''')
-		val sub = result.statements.get(0) as BinaryOp
-		Assertions.assertEquals(sub.op , "-")
+		val sub = result.statements.get(0) as Operation
+		sub.op as Minus
+		Assertions.assertEquals((sub.left as Variable).varName, "a")
+		Assertions.assertEquals((sub.right as Const).value, 1)
 	}
-	
+
 	@Test
-	def void testTime(){
+	def void testTime() {
 		val result = parseHelper.parse('''
 			a * 1 
 		''')
-		val sub = result.statements.get(0) as BinaryOp
-		Assertions.assertEquals(sub.op , "*")
+		val time = result.statements.get(0) as Operation
+		time.op as Time
+		Assertions.assertEquals((time.left as Variable).varName, "a")
+		Assertions.assertEquals((time.right as Const).value, 1)
 	}
-	
+
 	@Test
-	def void testDiv(){
+	def void testDiv() {
 		val result = parseHelper.parse('''
 			a / 1 
 		''')
-		val sub = result.statements.get(0) as BinaryOp
-		Assertions.assertEquals(sub.op , "/")
+		val div = result.statements.get(0) as Operation
+		div.op as Div // smoke test
+		Assertions.assertEquals((div.left as Variable).varName, "a")
+		Assertions.assertEquals((div.right as Const).value, 1)
 	}
-	
+
 	@Test
-	def void testcomplexExpression(){
+	def void testcomplexExpression() {
 		val result = parseHelper.parse('''
 			(a + 1) * 2 
 		''')
-		val multExp = result.statements.get(0) as BinaryOp
-		Assertions.assertEquals(multExp.op , "*")
-		Assertions.assertEquals((multExp.left as BinaryOp).op , "+")
-		Assertions.assertEquals((multExp.right as Const).value , 2) 
+
+		val multExp = result.statements.get(0) as Operation
+		multExp.op as Time
+		(multExp.left as Operation).op as Addition
+		Assertions.assertEquals((multExp.right as Const).value, 2)
 	}
+
+	@Test
+	def void testOperationWithParenthesis() {
+		val result = parseHelper.parse('''
+			(a + 1) * 2 
+		''')
+		Assertions.assertEquals(result.statements.size, 1)
+		val multExpr = result.statements.get(0) as Operation
+		(multExpr.left as Operation).op as Addition
+		Assertions.assertEquals((multExpr.right as Const).value, 2)
+	}
+
+	@Test
+	def void testMultipleLineStatement() {
+		val result = parseHelper.parse('''
+			load( "pathTo.json" , varName )
+			1 * ( a / 5 ) 
+			save("path2.json" , varName)
+		''')
+		// smoke test 
+		val load = result.statements.get(0) as Load
+		var multExpr = result.statements.get(1) as Operation
+		var save = result.statements.get(2) as Save
+	}
+
 }

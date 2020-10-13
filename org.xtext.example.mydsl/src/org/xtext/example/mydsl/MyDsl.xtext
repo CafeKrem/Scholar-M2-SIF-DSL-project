@@ -3,7 +3,7 @@ grammar org.xtext.example.mydsl.MyDsl with org.eclipse.xtext.common.Terminals
 generate myDsl "http://www.xtext.org/example/mydsl/MyDsl"
 
 Programme:
-	statements+=Statement;
+	statements+=Statement*;
 
 Statement:
 //Assignement
@@ -11,48 +11,28 @@ Statement:
 
 Primitive:
 	Load | Save;
-	
-Expression:
-	BinaryOp
-	| Const
-	| Variable
-	//	| JsonObjectGet
-	//	| JsonObjectAssignement
-;
+
+	//Expression:
+//	BinaryOp | Const | Variable
+//	| JsonObjectGet
+//	| JsonObjectAssignement
+//;
 
 //JsonObjectGet:
 //	jsonObject = 
 //;
-BinaryOp:
-	left=ExpressionTerminal op=Operator right=Expression 
-;
+//BinaryOp :
+//	left = ExpressionTerminal op = Operator right = Expression ;
+//ExpressionTerminal :
+//	'(' Expression ')' | Const | Variable ;
+Expression:
+	TerminalExpression ({Operation.left=current} op=Operator right=TerminalExpression)*;
 
-ExpressionTerminal:
-	Const
-	| Variable
-;
+TerminalExpression returns Expression:
+	'(' Expression ')' | {Const} value=INT | {Variable} varName=ID;
 
 Operator:
-	Addition | Minus | Time | Div
-;
-Addition:
-	"+"
-;
-Minus:
-	"-"
-;
-Time:
-	"*"
-;
-Div:
-	"/"
-;
-
-Variable:
-	varName=ID;
-
-Const:
-	value=INT;
+	{Addition} "+" | {Minus} "-" | {Time}  "*"| {Div}"/";
 
 Load:
 	"load" "(" path=STRING "," varName=ID ")";
