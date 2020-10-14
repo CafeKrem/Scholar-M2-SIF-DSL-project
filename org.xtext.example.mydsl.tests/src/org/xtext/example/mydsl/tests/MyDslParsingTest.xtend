@@ -22,6 +22,14 @@ import org.xtext.example.mydsl.myDsl.Time
 import org.xtext.example.mydsl.myDsl.Addition
 import org.xtext.example.mydsl.myDsl.Minus
 import org.xtext.example.mydsl.myDsl.JsonObject
+import java.util.Dictionary
+import org.xtext.example.mydsl.myDsl.JsonValue
+import org.eclipse.emf.common.util.EList
+import java.util.List
+import org.xtext.example.mydsl.myDsl.Association
+import java.util.Hashtable
+import org.xtext.example.mydsl.myDsl.True
+import org.xtext.example.mydsl.myDsl.False
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MyDslInjectorProvider)
@@ -148,14 +156,46 @@ class MyDslParsingTest {
 		var multExpr = result.statements.get(1) as Operation
 		var save = result.statements.get(2) as Save
 	}
-	
+
 	@Test
-	def void testSimpleJSONObjectExpression(){
+	def void testSimpleJSONObjectExpression() {
 		val result = parseHelper.parse('''
 			{ "string"  : "ValueA", "integer": 10 , "booleanTrue": true , "booleanFalse" : false } 
 		''')
 		Assertions.assertEquals(result.statements.size(), 1)
-		val jsonObject =  result.statements.get(0) as JsonObject
-//		Assertions.assertEquals(jsonObject.) 
+		val jsonObject = result.statements.get(0) as JsonObject
+		val dico = new Hashtable<String, JsonValue>()
+		val iterator = jsonObject.associations.iterator()
+		while (iterator.hasNext()) {
+			val object = iterator.next()
+			if (object.value instanceof True || object.value instanceof False) {
+				dico.put(object.key, object.value)
+			} else {
+				dico.put(object.key, object.value)
+			}
+
+		}
+		Assertions.assertEquals(dico.get("string"), "ValueA")
+		Assertions.assertEquals(dico.get("integer"), 10)
+		Assertions.assertEquals(dico.get("booleanTrue"), true)
+		Assertions.assertEquals(dico.get("booleanFalse"), false)
+
+	}
+
+	@Test
+	def void testEmptyJsonOBject() {
+		val result = parseHelper.parse('''
+			{ } 
+		''')
+		Assertions.assertEquals(result.statements.size, 1)
+		val jsonObject = result.statements.get(0) as JsonObject
+		Assertions.assertTrue(jsonObject.associations.isEmpty())
+	}
+
+	@Test
+	def void testBadJsonObjectShouldRaiseParsingException() {
+		val result = parseHelper.parse('''
+			{ { } 
+		''')
 	}
 }
