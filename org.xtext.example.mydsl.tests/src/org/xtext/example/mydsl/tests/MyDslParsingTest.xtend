@@ -4,38 +4,52 @@
 package org.xtext.example.mydsl.tests
 
 import com.google.inject.Inject
+import java.util.Dictionary
+import java.util.Hashtable
+import java.util.List
+import org.eclipse.emf.common.util.EList
 import org.eclipse.xtext.testing.InjectWith
 import org.eclipse.xtext.testing.extensions.InjectionExtension
 import org.eclipse.xtext.testing.util.ParseHelper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
-import org.xtext.example.mydsl.myDsl.Operation
+import org.xtext.example.mydsl.myDsl.Addition
+import org.xtext.example.mydsl.myDsl.Association
+import org.xtext.example.mydsl.myDsl.Boolean
 import org.xtext.example.mydsl.myDsl.Const
+import org.xtext.example.mydsl.myDsl.Div
+import org.xtext.example.mydsl.myDsl.JsonInteger
+import org.xtext.example.mydsl.myDsl.JsonObject
+import org.xtext.example.mydsl.myDsl.JsonString
+import org.xtext.example.mydsl.myDsl.JsonValue
 import org.xtext.example.mydsl.myDsl.Load
+import org.xtext.example.mydsl.myDsl.Minus
+import org.xtext.example.mydsl.myDsl.Operation
+import org.xtext.example.mydsl.myDsl.Operation
 import org.xtext.example.mydsl.myDsl.Programme
 import org.xtext.example.mydsl.myDsl.Save
-import org.xtext.example.mydsl.myDsl.Variable
-import org.xtext.example.mydsl.myDsl.Operation
-import org.xtext.example.mydsl.myDsl.Div
 import org.xtext.example.mydsl.myDsl.Time
-import org.xtext.example.mydsl.myDsl.Addition
-import org.xtext.example.mydsl.myDsl.Minus
-import org.xtext.example.mydsl.myDsl.JsonObject
-import java.util.Dictionary
-import org.xtext.example.mydsl.myDsl.JsonValue
-import org.eclipse.emf.common.util.EList
-import java.util.List
-import org.xtext.example.mydsl.myDsl.Association
-import java.util.Hashtable
-import org.xtext.example.mydsl.myDsl.True
-import org.xtext.example.mydsl.myDsl.False
+import org.xtext.example.mydsl.myDsl.Variable
+import org.xtext.example.mydsl.myDsl.JsonArray
+import java.lang.reflect.Array
+import org.xtext.example.mydsl.myDsl.Expression
+import org.xtext.example.mydsl.myDsl.Assignement
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MyDslInjectorProvider)
 class MyDslParsingTest {
 	@Inject
 	ParseHelper<Programme> parseHelper
+
+	@Test
+	def void testSimpleVariable() {
+		val result = parseHelper.parse('''
+			a
+		''')
+		val variable = result.statements.get(0) as Variable
+		Assertions.assertEquals(variable.nodes.get(0), "a")
+	}
 
 	@Test
 	def void testLoadPrimitiveFunction() {
@@ -84,8 +98,8 @@ class MyDslParsingTest {
 			a + b 
 		''')
 		val addition = result.statements.get(0) as Operation
-		Assertions.assertEquals((addition.left as Variable).varName, "a")
-		Assertions.assertEquals((addition.right as Variable).varName, "b")
+		Assertions.assertEquals((addition.left as Variable).nodes.get(0), "a")
+		Assertions.assertEquals((addition.right as Variable).nodes.get(0), "b")
 	}
 
 	@Test
@@ -95,7 +109,7 @@ class MyDslParsingTest {
 		''')
 		val sub = result.statements.get(0) as Operation
 		sub.op as Minus
-		Assertions.assertEquals((sub.left as Variable).varName, "a")
+		Assertions.assertEquals((sub.left as Variable).nodes.get(0), "a")
 		Assertions.assertEquals((sub.right as Const).value, 1)
 	}
 
@@ -106,7 +120,7 @@ class MyDslParsingTest {
 		''')
 		val time = result.statements.get(0) as Operation
 		time.op as Time
-		Assertions.assertEquals((time.left as Variable).varName, "a")
+		Assertions.assertEquals((time.left as Variable).nodes.get(0), "a")
 		Assertions.assertEquals((time.right as Const).value, 1)
 	}
 
@@ -117,7 +131,7 @@ class MyDslParsingTest {
 		''')
 		val div = result.statements.get(0) as Operation
 		div.op as Div // smoke test
-		Assertions.assertEquals((div.left as Variable).varName, "a")
+		Assertions.assertEquals((div.left as Variable).nodes.get(0), "a")
 		Assertions.assertEquals((div.right as Const).value, 1)
 	}
 
@@ -165,21 +179,21 @@ class MyDslParsingTest {
 		Assertions.assertEquals(result.statements.size(), 1)
 		val jsonObject = result.statements.get(0) as JsonObject
 		val dico = new Hashtable<String, JsonValue>()
+		getKeyValueInJsonObject(jsonObject, dico)
+		Assertions.assertEquals((dico.get("string") as JsonString).value, "ValueA")
+		Assertions.assertEquals((dico.get("integer") as JsonInteger).value, 10)
+		Assertions.assertEquals((dico.get("booleanTrue") as Boolean).value, "true")
+		Assertions.assertEquals((dico.get("booleanFalse") as Boolean).value, "false")
+
+	}
+
+	protected def void getKeyValueInJsonObject(JsonObject jsonObject, Hashtable<String, JsonValue> dico) {
 		val iterator = jsonObject.associations.iterator()
 		while (iterator.hasNext()) {
 			val object = iterator.next()
-			if (object.value instanceof True || object.value instanceof False) {
-				dico.put(object.key, object.value)
-			} else {
-				dico.put(object.key, object.value)
-			}
+			dico.put(object.key, object.value)
 
 		}
-		Assertions.assertEquals(dico.get("string"), "ValueA")
-		Assertions.assertEquals(dico.get("integer"), 10)
-		Assertions.assertEquals(dico.get("booleanTrue"), true)
-		Assertions.assertEquals(dico.get("booleanFalse"), false)
-
 	}
 
 	@Test
@@ -190,6 +204,32 @@ class MyDslParsingTest {
 		Assertions.assertEquals(result.statements.size, 1)
 		val jsonObject = result.statements.get(0) as JsonObject
 		Assertions.assertTrue(jsonObject.associations.isEmpty())
+	}
+
+	@Test
+	def void testJsonContainingArray() {
+		val result = parseHelper.parse('''
+			{ "array" : [ 1 , "a"  ] } 
+		''')
+		val jsonObject = result.statements.get(0) as JsonObject
+		val dico = new Hashtable<String, JsonValue>()
+		getKeyValueInJsonObject(jsonObject, dico)
+		Assertions.assertTrue(((dico.get("array") as JsonArray).value.get(0) as JsonInteger).value == 1)
+		Assertions.assertTrue(((dico.get("array") as JsonArray).value.get(1) as JsonString).value == "a")
+
+	}
+
+	@Test
+	def void testSimpleJsonAssignement() {
+		val result = parseHelper.parse('''
+			json.intAttribute = 1
+		''')
+		Assertions.assertFalse(result instanceof Variable)
+		val assignement = result.statements.get(0) as Assignement
+		Assertions.assertEquals((assignement.variable as Variable).nodes.get(0), "json")
+		Assertions.assertEquals((assignement.variable as Variable).nodes.get(1), "intAttribute")
+		Assertions.assertTrue(assignement.value instanceof Expression)
+
 	}
 
 	@Test

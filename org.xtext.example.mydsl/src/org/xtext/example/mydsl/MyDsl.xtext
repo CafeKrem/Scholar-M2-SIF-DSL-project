@@ -6,8 +6,10 @@ Programme:
 	statements+=Statement*;
 
 Statement:
-//Assignement
-	Primitive | Expression;
+	Primitive | Expression | Assignement;
+
+Assignement:
+	variable=Variable "=" value=Expression;
 
 Primitive:
 	Load | Save;
@@ -16,7 +18,10 @@ Expression:
 	TerminalExpression ({Operation.left=current} op=Operator right=TerminalExpression)*;
 
 TerminalExpression returns Expression:
-	'(' Expression ')' | {Const} value=INT | {Variable} varName=ID | JsonObject;
+	'(' Expression ')' | {Const} value=INT | Variable | JsonObject;
+
+Variable:
+	nodes+=ID ('.' nodes+=ID)*;
 
 JsonObject:
 	{JsonObject} "{" (associations+=Association)? (',' associations+=Association)* "}";
@@ -25,10 +30,19 @@ Association:
 	(key=STRING ":" value=JsonValue);
 
 JsonValue:
-	{JsonString} value=STRING | {JsonInteger} value=INT | Boolean | JsonObject;
+	JsonString | JsonInteger | Boolean | JsonObject | JsonArray;
+
+JsonArray:
+	'[' value+=JsonValue (',' value+=JsonValue)* ']' | {JsonArray} '[' ']';
+
+JsonString:
+	value=STRING;
+
+JsonInteger:
+	value=INT;
 
 Boolean:
-	{True} "true" | {False} "false";
+	{Boolean} value="true" | {Boolean} value="false";
 
 Operator:
 	{Addition} "+" | {Minus} "-" | {Time} "*" | {Div} "/";
