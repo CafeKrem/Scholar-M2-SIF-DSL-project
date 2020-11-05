@@ -17,7 +17,6 @@ import org.junit.jupiter.api.^extension.ExtendWith
 import org.xtext.example.mydsl.myDsl.Addition
 import org.xtext.example.mydsl.myDsl.Association
 import org.xtext.example.mydsl.myDsl.Boolean
-import org.xtext.example.mydsl.myDsl.Const
 import org.xtext.example.mydsl.myDsl.Div
 import org.xtext.example.mydsl.myDsl.JsonInteger
 import org.xtext.example.mydsl.myDsl.JsonObject
@@ -35,6 +34,13 @@ import org.xtext.example.mydsl.myDsl.JsonArray
 import java.lang.reflect.Array
 import org.xtext.example.mydsl.myDsl.Expression
 import org.xtext.example.mydsl.myDsl.Assignement
+import org.xtext.example.mydsl.myDsl.Sum
+import org.xtext.example.mydsl.myDsl.Prod
+import org.xtext.example.mydsl.myDsl.True
+import org.xtext.example.mydsl.myDsl.False
+import org.xtext.example.mydsl.myDsl.And
+import org.xtext.example.mydsl.myDsl.Or
+import org.xtext.example.mydsl.myDsl.Not
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MyDslInjectorProvider)
@@ -49,6 +55,26 @@ class MyDslParsingTest {
 		''')
 		val variable = result.statements.get(0) as Variable
 		Assertions.assertEquals(variable.nodes.get(0), "a")
+	}
+
+	@Test
+	def void testSumTable() {
+		val result = parseHelper.parse('''
+			sum(jsonObject.table)
+		''')
+		val sum = result.statements.get(0) as Sum
+		Assertions.assertTrue(sum.variable instanceof Variable)
+
+	}
+
+	@Test
+	def void testProdTable() {
+		val result = parseHelper.parse('''
+			prod(jsonObject.table)
+		''')
+		val sum = result.statements.get(0) as Prod
+		Assertions.assertTrue(sum.variable instanceof Variable)
+
 	}
 
 	@Test
@@ -67,7 +93,7 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			1
 		''')
-		val const = result.statements.get(0) as Const
+		val const = result.statements.get(0) as JsonInteger
 		Assertions.assertEquals(const.value, 1)
 	}
 
@@ -88,8 +114,8 @@ class MyDslParsingTest {
 			1 + 2 
 		''')
 		val addition = result.statements.get(0) as Operation
-		Assertions.assertEquals((addition.left as Const).value, 1)
-		Assertions.assertEquals((addition.right as Const).value, 2)
+		Assertions.assertEquals((addition.left as JsonInteger).value, 1)
+		Assertions.assertEquals((addition.right as JsonInteger).value, 2)
 	}
 
 	@Test
@@ -110,7 +136,7 @@ class MyDslParsingTest {
 		val sub = result.statements.get(0) as Operation
 		sub.op as Minus
 		Assertions.assertEquals((sub.left as Variable).nodes.get(0), "a")
-		Assertions.assertEquals((sub.right as Const).value, 1)
+		Assertions.assertEquals((sub.right as JsonInteger).value, 1)
 	}
 
 	@Test
@@ -121,7 +147,7 @@ class MyDslParsingTest {
 		val time = result.statements.get(0) as Operation
 		time.op as Time
 		Assertions.assertEquals((time.left as Variable).nodes.get(0), "a")
-		Assertions.assertEquals((time.right as Const).value, 1)
+		Assertions.assertEquals((time.right as JsonInteger).value, 1)
 	}
 
 	@Test
@@ -132,7 +158,7 @@ class MyDslParsingTest {
 		val div = result.statements.get(0) as Operation
 		div.op as Div // smoke test
 		Assertions.assertEquals((div.left as Variable).nodes.get(0), "a")
-		Assertions.assertEquals((div.right as Const).value, 1)
+		Assertions.assertEquals((div.right as JsonInteger).value, 1)
 	}
 
 	@Test
@@ -144,7 +170,7 @@ class MyDslParsingTest {
 		val multExp = result.statements.get(0) as Operation
 		multExp.op as Time
 		(multExp.left as Operation).op as Addition
-		Assertions.assertEquals((multExp.right as Const).value, 2)
+		Assertions.assertEquals((multExp.right as JsonInteger).value, 2)
 	}
 
 	@Test
@@ -155,7 +181,7 @@ class MyDslParsingTest {
 		Assertions.assertEquals(result.statements.size, 1)
 		val multExpr = result.statements.get(0) as Operation
 		(multExpr.left as Operation).op as Addition
-		Assertions.assertEquals((multExpr.right as Const).value, 2)
+		Assertions.assertEquals((multExpr.right as JsonInteger).value, 2)
 	}
 
 	@Test
@@ -182,8 +208,8 @@ class MyDslParsingTest {
 		getKeyValueInJsonObject(jsonObject, dico)
 		Assertions.assertEquals((dico.get("string") as JsonString).value, "ValueA")
 		Assertions.assertEquals((dico.get("integer") as JsonInteger).value, 10)
-		Assertions.assertEquals((dico.get("booleanTrue") as Boolean).value, "true")
-		Assertions.assertEquals((dico.get("booleanFalse") as Boolean).value, "false")
+		Assertions.assertTrue((dico.get("booleanTrue") instanceof True))
+		Assertions.assertTrue((dico.get("booleanFalse") instanceof False))
 
 	}
 
@@ -237,5 +263,64 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			{ { } 
 		''')
+
+	}
+
+	@Test
+	def void testTrue() {
+		val result = parseHelper.parse('''
+			true
+		''')
+		Assertions.assertTrue(result.statements.get(0) instanceof True)
+	}
+
+	@Test
+	def void testFalse() {
+		val result = parseHelper.parse('''
+			false
+		''')
+		Assertions.assertTrue(result.statements.get(0) instanceof False)
+	}
+
+	@Test
+	def void testAndSimpleExpression() {
+		val result = parseHelper.parse('''
+			true & false
+		''')
+		val andOperation = result.statements.get(0) as Operation
+		Assertions.assertTrue(andOperation.op instanceof And)
+		Assertions.assertTrue(andOperation.left instanceof True)
+		Assertions.assertTrue(andOperation.right instanceof False)
+
+	}
+
+	@Test
+	def void testOrSimpleExpression() {
+		val result = parseHelper.parse('''
+			true | false
+		''')
+		val andOperation = result.statements.get(0) as Operation
+		Assertions.assertTrue(andOperation.op instanceof Or)
+		Assertions.assertTrue(andOperation.left instanceof True)
+		Assertions.assertTrue(andOperation.right instanceof False)
+
+	}
+
+	@Test
+	def void testNotExpression() {
+		val result = parseHelper.parse('''
+			not true
+		''')
+		val notExpression = result.statements.get(0) as Not
+		Assertions.assertTrue(notExpression.value instanceof True)
+	}
+	
+	@Test
+	def void testNotComplexExpression(){
+		val result = parseHelper.parse('''
+			not ( (true & false) | (false & true) )
+		''')
+		val notExpression = result.statements.get(0) as Not
+		Assertions.assertTrue((notExpression.value as Operation).op instanceof Or)
 	}
 }
