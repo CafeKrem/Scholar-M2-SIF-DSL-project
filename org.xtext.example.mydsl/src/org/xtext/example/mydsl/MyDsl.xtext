@@ -2,6 +2,8 @@ grammar org.xtext.example.mydsl.MyDsl with org.eclipse.xtext.common.Terminals
 
 generate myDsl "http://www.xtext.org/example/mydsl/MyDsl"
 
+// TODO : unaryExpression & BinaryExpression &  not expression 
+// TODO : 
 Programme:
 	statements+=Statement*;
 
@@ -12,13 +14,19 @@ Assignement:
 	variable=Variable "=" value=Expression;
 
 Primitive:
-	Load | Save;
+	Load | Save | Sum | Prod | Depth | Print;
+
+Sum:
+	"sum" "(" variable=Variable ")";
+
+Prod:
+	"prod" "(" variable=Variable ")";
 
 Expression:
-	TerminalExpression ({Operation.left=current} op=Operator right=TerminalExpression)*;
+	TerminalExpression ({BinaryExpression.left=current} op=Operator right=TerminalExpression)*;
 
 TerminalExpression returns Expression:
-	'(' Expression ')' | {Const} value=INT | Variable | JsonObject;
+	'(' Expression ')' | JsonValue | Variable | {Not} 'not' value=TerminalExpression;
 
 Variable:
 	nodes+=ID ('.' nodes+=ID)*;
@@ -42,13 +50,19 @@ JsonInteger:
 	value=INT;
 
 Boolean:
-	{Boolean} value="true" | {Boolean} value="false";
+	{True} "true" | {False} "false";
 
 Operator:
-	{Addition} "+" | {Minus} "-" | {Time} "*" | {Div} "/";
+	{Addition} "+" | {Minus} "-" | {Time} "*" | {Div} "/" | {And} '&' | {Or} '|';
 
 Load:
 	"load" "(" path=STRING "," varName=ID ")";
 
 Save:
 	"save" "(" path=STRING "," varName=ID ")";
+
+Depth:
+	"depth" "(" value=Expression ")";
+
+Print:
+	"print" "(" value=Expression ")";
