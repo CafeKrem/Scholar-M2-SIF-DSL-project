@@ -24,8 +24,8 @@ import org.xtext.example.mydsl.myDsl.JsonString
 import org.xtext.example.mydsl.myDsl.JsonValue
 import org.xtext.example.mydsl.myDsl.Load
 import org.xtext.example.mydsl.myDsl.Minus
-import org.xtext.example.mydsl.myDsl.Operation
-import org.xtext.example.mydsl.myDsl.Operation
+import org.xtext.example.mydsl.myDsl.BinaryExpression
+import org.xtext.example.mydsl.myDsl.BinaryExpression
 import org.xtext.example.mydsl.myDsl.Programme
 import org.xtext.example.mydsl.myDsl.Save
 import org.xtext.example.mydsl.myDsl.Time
@@ -41,6 +41,8 @@ import org.xtext.example.mydsl.myDsl.False
 import org.xtext.example.mydsl.myDsl.And
 import org.xtext.example.mydsl.myDsl.Or
 import org.xtext.example.mydsl.myDsl.Not
+import org.xtext.example.mydsl.myDsl.Depth
+import org.xtext.example.mydsl.myDsl.Print
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MyDslInjectorProvider)
@@ -113,7 +115,7 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			1 + 2 
 		''')
-		val addition = result.statements.get(0) as Operation
+		val addition = result.statements.get(0) as BinaryExpression
 		Assertions.assertEquals((addition.left as JsonInteger).value, 1)
 		Assertions.assertEquals((addition.right as JsonInteger).value, 2)
 	}
@@ -123,7 +125,7 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			a + b 
 		''')
-		val addition = result.statements.get(0) as Operation
+		val addition = result.statements.get(0) as BinaryExpression
 		Assertions.assertEquals((addition.left as Variable).nodes.get(0), "a")
 		Assertions.assertEquals((addition.right as Variable).nodes.get(0), "b")
 	}
@@ -133,7 +135,7 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			a - 1 
 		''')
-		val sub = result.statements.get(0) as Operation
+		val sub = result.statements.get(0) as BinaryExpression
 		sub.op as Minus
 		Assertions.assertEquals((sub.left as Variable).nodes.get(0), "a")
 		Assertions.assertEquals((sub.right as JsonInteger).value, 1)
@@ -144,7 +146,7 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			a * 1 
 		''')
-		val time = result.statements.get(0) as Operation
+		val time = result.statements.get(0) as BinaryExpression
 		time.op as Time
 		Assertions.assertEquals((time.left as Variable).nodes.get(0), "a")
 		Assertions.assertEquals((time.right as JsonInteger).value, 1)
@@ -155,7 +157,7 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			a / 1 
 		''')
-		val div = result.statements.get(0) as Operation
+		val div = result.statements.get(0) as BinaryExpression
 		div.op as Div // smoke test
 		Assertions.assertEquals((div.left as Variable).nodes.get(0), "a")
 		Assertions.assertEquals((div.right as JsonInteger).value, 1)
@@ -167,20 +169,20 @@ class MyDslParsingTest {
 			(a + 1) * 2 
 		''')
 
-		val multExp = result.statements.get(0) as Operation
+		val multExp = result.statements.get(0) as BinaryExpression
 		multExp.op as Time
-		(multExp.left as Operation).op as Addition
+		(multExp.left as BinaryExpression).op as Addition
 		Assertions.assertEquals((multExp.right as JsonInteger).value, 2)
 	}
 
 	@Test
-	def void testOperationWithParenthesis() {
+	def void testBinaryExpressionWithParenthesis() {
 		val result = parseHelper.parse('''
 			(a + 1) * 2 
 		''')
 		Assertions.assertEquals(result.statements.size, 1)
-		val multExpr = result.statements.get(0) as Operation
-		(multExpr.left as Operation).op as Addition
+		val multExpr = result.statements.get(0) as BinaryExpression
+		(multExpr.left as BinaryExpression).op as Addition
 		Assertions.assertEquals((multExpr.right as JsonInteger).value, 2)
 	}
 
@@ -193,7 +195,7 @@ class MyDslParsingTest {
 		''')
 		// smoke test 
 		val load = result.statements.get(0) as Load
-		var multExpr = result.statements.get(1) as Operation
+		var multExpr = result.statements.get(1) as BinaryExpression
 		var save = result.statements.get(2) as Save
 	}
 
@@ -287,10 +289,10 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			true & false
 		''')
-		val andOperation = result.statements.get(0) as Operation
-		Assertions.assertTrue(andOperation.op instanceof And)
-		Assertions.assertTrue(andOperation.left instanceof True)
-		Assertions.assertTrue(andOperation.right instanceof False)
+		val andBinaryExpression = result.statements.get(0) as BinaryExpression
+		Assertions.assertTrue(andBinaryExpression.op instanceof And)
+		Assertions.assertTrue(andBinaryExpression.left instanceof True)
+		Assertions.assertTrue(andBinaryExpression.right instanceof False)
 
 	}
 
@@ -299,10 +301,10 @@ class MyDslParsingTest {
 		val result = parseHelper.parse('''
 			true | false
 		''')
-		val andOperation = result.statements.get(0) as Operation
-		Assertions.assertTrue(andOperation.op instanceof Or)
-		Assertions.assertTrue(andOperation.left instanceof True)
-		Assertions.assertTrue(andOperation.right instanceof False)
+		val andBinaryExpression = result.statements.get(0) as BinaryExpression
+		Assertions.assertTrue(andBinaryExpression.op instanceof Or)
+		Assertions.assertTrue(andBinaryExpression.left instanceof True)
+		Assertions.assertTrue(andBinaryExpression.right instanceof False)
 
 	}
 
@@ -314,13 +316,33 @@ class MyDslParsingTest {
 		val notExpression = result.statements.get(0) as Not
 		Assertions.assertTrue(notExpression.value instanceof True)
 	}
-	
+
 	@Test
-	def void testNotComplexExpression(){
+	def void testNotComplexExpression() {
 		val result = parseHelper.parse('''
 			not ( (true & false) | (false & true) )
 		''')
 		val notExpression = result.statements.get(0) as Not
-		Assertions.assertTrue((notExpression.value as Operation).op instanceof Or)
+		Assertions.assertTrue((notExpression.value as BinaryExpression).op instanceof Or)
+	}
+
+	@Test
+	def void testDepthPrimitive() {
+		val result = parseHelper.parse('''
+			a = {}
+			depth ( a ) 
+		''')
+		val depth = result.statements.get(1) as Depth
+		Assertions.assertEquals((depth.value as Variable).nodes.get(0), "a")
+	}
+	
+	@Test
+	def void testPrintPrimitive() {
+		val result = parseHelper.parse('''
+			a = {}
+			print ( a ) 
+		''')
+		val depth = result.statements.get(1) as Print
+		Assertions.assertEquals((depth.value as Variable).nodes.get(0), "a")
 	}
 }

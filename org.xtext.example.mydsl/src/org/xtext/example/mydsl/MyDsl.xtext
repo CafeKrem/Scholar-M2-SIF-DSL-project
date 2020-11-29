@@ -14,7 +14,7 @@ Assignement:
 	variable=Variable "=" value=Expression;
 
 Primitive:
-	Load | Save | Sum | Prod;
+	Load | Save | Sum | Prod | Depth | Print;
 
 Sum:
 	"sum" "(" variable=Variable ")";
@@ -23,10 +23,10 @@ Prod:
 	"prod" "(" variable=Variable ")";
 
 Expression:
-	TerminalExpression ({Operation.left=current} op=Operator right=TerminalExpression)*;
+	TerminalExpression ({BinaryExpression.left=current} op=Operator right=TerminalExpression)*;
 
 TerminalExpression returns Expression:
-	'(' Expression ')' | JsonInteger | Variable | JsonObject | Boolean | {Not} 'not' value=TerminalExpression;
+	'(' Expression ')' | JsonValue | Variable | {Not} 'not' value=TerminalExpression;
 
 Variable:
 	nodes+=ID ('.' nodes+=ID)*;
@@ -60,3 +60,9 @@ Load:
 
 Save:
 	"save" "(" path=STRING "," varName=ID ")";
+
+Depth:
+	"depth" "(" value=Expression ")";
+
+Print:
+	"print" "(" value=Expression ")";
